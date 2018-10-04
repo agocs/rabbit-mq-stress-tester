@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tester-consumers
+spec:
+  parallelism: 12
+  completions: 12
+  backoffLimit: 4
+  template:
+    spec:
+      containers:
+      - command:
+            - "./rabbit-mq-stress-tester"
+            - "--server"
+            - "rabbit-ha-adn-rabbitmq-ha.adn"
+            - "--vhost"
+            - "stressing"
+            - "--port"
+            - "5672"
+            - "--user"
+            - "stress"
+            - "--password"
+            - "rompePepe83"
+            - "--consumer"
+            - "10000"
+            - "--concurrency"
+            - "4"
+            - "--wait-for-ack"
+            - "--quiet"
+        image: docker-registry.management.fravega.com/fravega/rabbit-mq-stress-tester:1.1.2
+        imagePullPolicy: Always
+        name: tester
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "50m"
+          limits:
+            memory: "16Mi"
+            cpu: "50m"
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: nexus

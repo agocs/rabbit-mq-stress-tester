@@ -1,0 +1,5 @@
+#!/bin/bash
+
+POD=$(kubectl get -n adn pod --selector=app=rabbitmq-ha,release=rabbit-ha-adn -o jsonpath='{.items[0].metadata.name}')
+echo Connecting to ${POD}
+kubectl port-forward -n adn "${POD}" 15672

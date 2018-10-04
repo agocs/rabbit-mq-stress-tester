@@ -8,7 +8,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func Consume(uri string, doneChan chan bool) {
+func Consume(uri string, thinkTime int, doneChan chan bool) {
 	log.Println("Consuming...")
 	connection, err := amqp.Dial(uri)
 	if err != nil {
@@ -24,7 +24,7 @@ func Consume(uri string, doneChan chan bool) {
 
 	q := MakeQueue(channel)
 
-	msgs, err := channel.Consume(q.Name, "", true, false, false, false, nil)
+	msgs, err := channel.Consume(q.Name, "", thinkTime == 0, false, false, false, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,6 +38,12 @@ func Consume(uri string, doneChan chan bool) {
 		}
 		log.Printf("Message age: %s", time.Since(thisMessage.TimeNow))
 
+		if thinkTime != 0 {
+		  go func() {
+        time.Sleep(time.Duration(thinkTime) * time.Millisecond)
+        d.Ack(false)
+      }()
+		}
 	}
 
 	log.Println("done receiving")

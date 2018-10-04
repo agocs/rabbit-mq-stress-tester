@@ -9,10 +9,11 @@ import (
 )
 
 type ProducerConfig struct {
-	Uri        string
-	Bytes      int
-	Quiet      bool
-	WaitForAck bool
+	Uri        		string
+	Bytes      		int
+	Quiet      		bool
+	WaitForAck 		bool
+	ExchangeName	string
 }
 
 func Produce(config ProducerConfig, tasks chan int) {
@@ -50,12 +51,12 @@ func Produce(config ProducerConfig, tasks chan int) {
 		message := &MqMessage{start, sequenceNumber, makeString(config.Bytes)}
 		messageJson, _ := json.Marshal(message)
 
-		channel.Publish("", q.Name, true, false, amqp.Publishing{
+		channel.Publish(config.ExchangeName, q.Name, true, false, amqp.Publishing{
 			Headers:         amqp.Table{},
 			ContentType:     "text/plain",
 			ContentEncoding: "UTF-8",
 			Body:            messageJson,
-			DeliveryMode:    amqp.Transient,
+			DeliveryMode:    amqp.Persistent,
 			Priority:        0,
 		},
 		)
