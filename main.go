@@ -29,7 +29,7 @@ func main() {
 		cli.StringFlag{Name: "password, pass", Value: "guest", Usage: "user password for RabbitMQ server"},
 		cli.StringFlag{Name: "vhost, V", Value: "", Usage: "vhost for RabbitMQ server"},
 		cli.IntFlag{Name: "producer, p", Value: 0, Usage: "Number of messages to produce, -1 to produce forever"},
-		cli.StringFlag{Name: "xchange, x", Value: "", Usage: "Name of the exchange to send messages to"},
+		cli.StringFlag{Name: "exchange, x", Value: "", Usage: "Name of the exchange to send messages to"},
 		cli.IntFlag{Name: "wait, w", Value: 0, Usage: "Number of nanoseconds to wait between publish events"},
 		cli.IntFlag{Name: "consumer, c", Value: -1, Usage: "Number of messages to consume. 0 consumes forever"},
 		cli.IntFlag{Name: "think-time, t", Value: 0, Usage: "Number milliseconds to wait before acknowledge. 0 auto ack"},
@@ -87,16 +87,17 @@ func makeProducers(n int, wait int, concurrency int, config ProducerConfig) {
 
 	taskChan := make(chan int)
 	for i := 0; i < concurrency; i++ {
-		go Produce(config, taskChan)
+		go Produce(config, taskChan, i)
 	}
 
 	start := time.Now()
-
+  log.Print("Start sending messages to producers ...")
 	for i := 0; i < n; i++ {
 		taskChan <- i
 		time.Sleep(time.Duration(int64(wait)))
 	}
 
+	log.Print("Waiting for producers to finish ...")
 	time.Sleep(time.Duration(10000))
 
 	close(taskChan)

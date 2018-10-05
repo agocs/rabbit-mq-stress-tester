@@ -16,10 +16,11 @@ type ProducerConfig struct {
 	ExchangeName	string
 }
 
-func Produce(config ProducerConfig, tasks chan int) {
+func Produce(config ProducerConfig, tasks chan int, producerId int) {
+  log.Printf("Creating produrer %v ...", producerId)
 	connection, err := amqp.Dial(config.Uri)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatalf("Could not connect to server %v, %v", config.Uri, err.Error())
 	}
 
 	channel, err := connection.Channel()
@@ -49,10 +50,15 @@ func Produce(config ProducerConfig, tasks chan int) {
 		start := time.Now()
 
 		message := &MqMessage{start, sequenceNumber, makeString(config.Bytes)}
+
 		messageJson, _ := json.Marshal(message)
 
-		channel.Publish(config.ExchangeName, q.Name, true, false, amqp.Publishing{
-			Headers:         amqp.Table{},
+		log.Printf("Sending %v", sequenceNumber)
+    tables := amqp.Table{
+      "x-delay":	1200000,
+    }
+    channel.Publish(config.ExchangeName, q.Name, true, false, amqp.Publishing{
+			Headers:         tables,
 			ContentType:     "text/plain",
 			ContentEncoding: "UTF-8",
 			Body:            messageJson,
@@ -64,7 +70,7 @@ func Produce(config ProducerConfig, tasks chan int) {
 		confirmOne(ack, nack, config.Quiet, config.WaitForAck)
 
 		if !config.Quiet {
-			log.Println(time.Since(start))
+			log.Printf("On %v, %v", config.ExchangeName, time.Since(start))
 		}
 	}
 

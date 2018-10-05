@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 VERSION=`git rev-parse --abbrev-ref HEAD`-`git rev-parse --short HEAD`
-VERSION='1.2.0'
+VERSION='1.2.3'
 
 echo "Building docker version... $VERSION"
 

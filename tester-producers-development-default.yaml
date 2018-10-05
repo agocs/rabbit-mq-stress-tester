@@ -4,8 +4,8 @@ metadata:
   name: tester-producers-postventa-stress
   namespace: default
 spec:
-  parallelism: 30
-  completions: 30
+  parallelism: 10
+  completions: 10
   backoffLimit: 4
   template:
     spec:
@@ -23,15 +23,15 @@ spec:
             - "--password"
             - "rompePepe83"
             - "--producer"
-            - "10000"
-            - "exchange"
-            - "stress-test-exchange"
+            - "1000"
+            - "--exchange"
+            - ""
             - "--bytes"
             - "4096"
             - "--concurrency"
-            - "4"
+            - "5"
             - "--wait-for-ack"
-        image: docker-registry.management.fravega.com/fravega/rabbit-mq-stress-tester:1.2.0
+        image: docker-registry.management.fravega.com/fravega/rabbit-mq-stress-tester:1.2.3
         imagePullPolicy: Always
         name: tester
         resources:
