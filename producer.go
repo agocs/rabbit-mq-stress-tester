@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -54,9 +55,9 @@ func Produce(config ProducerConfig, tasks chan int, producerId int) {
 		messageJson, _ := json.Marshal(message)
 
 		log.Printf("P%v sending %v", producerId, sequenceNumber)
-		var headers amqp.Table
+		headers := make(map[string]interface{})
 		if config.ExchangeConfig.DelayMessages > 0 {
-			headers["x-delay"] = config.ExchangeConfig.DelayMessages
+			headers["x-delay"] = strconv.Itoa(config.ExchangeConfig.DelayMessages)
 		}
 		channel.Publish(config.ExchangeConfig.Name, q.Name, true, false, amqp.Publishing{
 			Headers:         headers,
