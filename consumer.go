@@ -8,9 +8,16 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func Consume(uri string, thinkTime int, doneChan chan bool) {
+type ConsumerConfig struct {
+	Uri            string
+	ThinkTime      int
+	ExchangeConfig ExchangeConfig
+	PrefetchCount  int
+}
+
+func Consume(config ConsumerConfig, doneChan chan bool) {
 	log.Println("Consuming...")
-	connection, err := amqp.Dial(uri)
+	connection, err := amqp.Dial(config.Uri)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -22,9 +29,15 @@ func Consume(uri string, thinkTime int, doneChan chan bool) {
 	}
 	defer channel.Close()
 
-	q := MakeQueue(channel)
+	if config.PrefetchCount > 0 {
+		if channel.Qos(config.PrefetchCount, 0, false) != nil {
+			log.Fatal(err.Error())
+		}
+	}
 
-	msgs, err := channel.Consume(q.Name, "", thinkTime == 0, false, false, false, nil)
+	q := MakeQueueAndBind(channel, config.ExchangeConfig)
+
+	msgs, err := channel.Consume(q.Name, "", config.ThinkTime == 0, false, false, false, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,11 +51,11 @@ func Consume(uri string, thinkTime int, doneChan chan bool) {
 		}
 		log.Printf("Message age: %s", time.Since(thisMessage.TimeNow))
 
-		if thinkTime != 0 {
-		  go func() {
-        time.Sleep(time.Duration(thinkTime) * time.Millisecond)
-        d.Ack(false)
-      }()
+		if config.ThinkTime != 0 {
+			go func() {
+				time.Sleep(time.Duration(config.ThinkTime) * time.Millisecond)
+				d.Ack(false)
+			}()
 		}
 	}
 
