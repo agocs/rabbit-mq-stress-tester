@@ -33,8 +33,10 @@ func main() {
 		cli.IntFlag{Name: "wait, w", Value: 0, Usage: "Number of nanoseconds to wait between publish events"},
 		cli.IntFlag{Name: "consumer, c", Value: -1, Usage: "Number of messages to consume. 0 consumes forever"},
 		cli.IntFlag{Name: "think-time, t", Value: 0, Usage: "Number milliseconds to wait before acknowledge. 0 auto ack"},
+		cli.IntFlag{Name: "prefetch-count, f", Value: 0, Usage: "Number of unacknowledged messages. 0 unlimited"},
 		cli.IntFlag{Name: "bytes, b", Value: 0, Usage: "number of extra bytes to add to the RabbitMQ message payload. About 50K max"},
 		cli.IntFlag{Name: "concurrency, n", Value: 50, Usage: "number of reader/writer Goroutines"},
+		cli.IntFlag{Name: "delay-messages, d", Value: 0, Usage: "Configures exchange to use delayed_message_exchange plugin (required to be installed in cluster). Only when -x is used. 0 doesn't use it"},
 		cli.BoolFlag{Name: "quiet, q", Usage: "Print only errors to stdout"},
 		cli.BoolFlag{Name: "wait-for-ack, a", Usage: "Wait for an ack or nack after enqueueing a message"},
 	}
@@ -55,12 +57,24 @@ func runApp(c *cli.Context) {
 		uri += "/" + c.String("vhost")
 	}
 
+	exConfig := ExchangeConfig{c.String("exchange"), 0}
+
+	if c.String("exchange") != "" && c.Int("delay-messages") > 0 {
+		exConfig.DelayMessages = c.Int("delay-messages")
+	}
+
 	if c.Int("consumer") > -1 {
 		thinkTime := c.Int("think-time")
 		if thinkTime < 0 {
 			log.Fatal("think-time should be non-negative")
 		}
-		makeConsumers(uri, c.Int("concurrency"), c.Int("consumer"), thinkTime)
+		config := ConsumerConfig{
+			uri,
+			thinkTime,
+			exConfig,
+			c.Int("prefetch-count"),
+		}
+		makeConsumers(c.Int("concurrency"), c.Int("consumer"), config)
 	}
 
 	if c.Int("producer") != 0 {
@@ -69,14 +83,49 @@ func runApp(c *cli.Context) {
 			c.Int("bytes"),
 			c.Bool("quiet"),
 			c.Bool("wait-for-ack"),
-			c.String("exchange"),
+			exConfig,
 		}
 		makeProducers(c.Int("producer"), c.Int("wait"), c.Int("concurrency"), config)
 	}
 }
 
+type ExchangeConfig struct {
+	Name          string
+	DelayMessages int
+}
+
+func MakeQueueAndBind(c *amqp.Channel, exConfig ExchangeConfig) amqp.Queue {
+
+	q := MakeQueue(c)
+
+	// declare exchange and bind queue if not using nameless exchange
+	if exConfig.Name != "" {
+		MakeExchange(c, exConfig)
+
+		err := c.QueueBind(q.Name, q.Name, exConfig.Name, false, nil)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}
+	return q
+}
+
+func MakeExchange(c *amqp.Channel, exConfig ExchangeConfig) {
+	if exConfig.DelayMessages > 0 {
+		err := c.ExchangeDeclare(exConfig.Name, "x-delayed-message", true, false, false, false, map[string]interface{}{"x-delayed-type": "direct"})
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	} else {
+		err := c.ExchangeDeclare(exConfig.Name, "direct", true, false, false, false, nil)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}
+}
+
 func MakeQueue(c *amqp.Channel) amqp.Queue {
-	q, err := c.QueueDeclare("stress-test-exchange", true, false, false, false, nil)
+	q, err := c.QueueDeclare("stress-test", true, false, false, false, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,7 +140,7 @@ func makeProducers(n int, wait int, concurrency int, config ProducerConfig) {
 	}
 
 	start := time.Now()
-  log.Print("Start sending messages to producers ...")
+	log.Print("Start sending messages to producers ...")
 	for i := 0; i < n; i++ {
 		taskChan <- i
 		time.Sleep(time.Duration(int64(wait)))
@@ -105,12 +154,13 @@ func makeProducers(n int, wait int, concurrency int, config ProducerConfig) {
 	log.Printf("Finished: %s", time.Since(start))
 }
 
-func makeConsumers(uri string, concurrency int, toConsume int, thinkTime int) {
+func makeConsumers(concurrency int, toConsume int, config ConsumerConfig) {
 
 	doneChan := make(chan bool)
 
 	for i := 0; i < concurrency; i++ {
-		go Consume(uri, thinkTime, doneChan)
+		// go Consume(uri, thinkTime, doneChan)
+		go Consume(config, doneChan)
 	}
 
 	start := time.Now()
