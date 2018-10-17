@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/streadway/amqp"
+	"github.com/urfave/cli"
 )
 
 var totalTime int64 = 0
