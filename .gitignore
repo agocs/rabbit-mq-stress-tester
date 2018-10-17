@@ -27,4 +27,4 @@ _testmain.go
 *.iml
 
 # Executable
-rabbit
+rabbit-mq-stress-tester

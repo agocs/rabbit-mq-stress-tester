@@ -1,7 +1,0 @@
-#!/bin/bash
-
-NS=default
-
-POD=$(kubectl get -n ${NS} pod --selector=app=rabbitmq-ha,release=rabbit-ha-postventa-stress -o jsonpath='{.items[0].metadata.name}')
-echo Connecting to ${POD}
-kubectl port-forward -n ${NS} "${POD}" 15672
