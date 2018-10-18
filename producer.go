@@ -3,22 +3,25 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/streadway/amqp"
 )
 
 type ProducerConfig struct {
-	Uri        string
-	Bytes      int
-	Quiet      bool
-	WaitForAck bool
+	Uri            string
+	Bytes          int
+	Quiet          bool
+	WaitForAck     bool
+	ExchangeConfig ExchangeConfig
 }
 
-func Produce(config ProducerConfig, tasks chan int) {
+func Produce(config ProducerConfig, tasks chan int, producerId int) {
+	log.Printf("Creating producer P%v ...", producerId)
 	connection, err := amqp.Dial(config.Uri)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatalf("Could not connect to server %v, %v", config.Uri, err.Error())
 	}
 
 	channel, err := connection.Channel()
@@ -32,7 +35,7 @@ func Produce(config ProducerConfig, tasks chan int) {
 
 	ack, nack := channel.NotifyConfirm(make(chan uint64, 1), make(chan uint64, 1))
 
-	q := MakeQueue(channel)
+	q := MakeQueueAndBind(channel, config.ExchangeConfig)
 
 	for {
 
@@ -48,22 +51,27 @@ func Produce(config ProducerConfig, tasks chan int) {
 		start := time.Now()
 
 		message := &MqMessage{start, sequenceNumber, makeString(config.Bytes)}
+
 		messageJson, _ := json.Marshal(message)
 
-		channel.Publish("", q.Name, true, false, amqp.Publishing{
-			Headers:         amqp.Table{},
-			ContentType:     "text/plain",
+		log.Printf("P%v sending %v", producerId, sequenceNumber)
+		headers := make(map[string]interface{})
+		if config.ExchangeConfig.DelayMessages > 0 {
+			headers["x-delay"] = strconv.Itoa(config.ExchangeConfig.DelayMessages)
+		}
+		channel.Publish(config.ExchangeConfig.Name, q.Name, true, false, amqp.Publishing{
+			Headers:         headers,
+			ContentType:     "application/json",
 			ContentEncoding: "UTF-8",
 			Body:            messageJson,
-			DeliveryMode:    amqp.Transient,
+			DeliveryMode:    amqp.Persistent,
 			Priority:        0,
-		},
-		)
+		})
 
 		confirmOne(ack, nack, config.Quiet, config.WaitForAck)
 
 		if !config.Quiet {
-			log.Println(time.Since(start))
+			log.Printf("P%v published %v on %v in %v", producerId, sequenceNumber, config.ExchangeConfig.Name, time.Since(start))
 		}
 	}
 

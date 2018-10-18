@@ -21,3 +21,10 @@ _testmain.go
 
 *.exe
 *.test
+
+# Idea
+/.idea/
+*.iml
+
+# Executable
+rabbit-mq-stress-tester
