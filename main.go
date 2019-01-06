@@ -28,6 +28,7 @@ func main() {
 		cli.StringFlag{Name: "user, u", Value: "guest", Usage: "user for RabbitMQ server"},
 		cli.StringFlag{Name: "password, pass", Value: "guest", Usage: "user password for RabbitMQ server"},
 		cli.StringFlag{Name: "vhost, V", Value: "", Usage: "vhost for RabbitMQ server"},
+		cli.StringFlag{Name: "queue-name", Value: "stress-queue", Usage: "Name of the queue to produce or consume from"},
 		cli.IntFlag{Name: "producer, p", Value: 0, Usage: "Number of messages to produce, -1 to produce forever"},
 		cli.StringFlag{Name: "exchange, x", Value: "", Usage: "Name of the exchange to send messages to"},
 		cli.IntFlag{Name: "wait, w", Value: 0, Usage: "Number of nanoseconds to wait between publish events"},
@@ -73,6 +74,7 @@ func runApp(c *cli.Context) {
 			thinkTime,
 			exConfig,
 			c.Int("prefetch-count"),
+			c.String("queue-name"),
 		}
 		makeConsumers(c.Int("concurrency"), c.Int("consumer"), config)
 	}
@@ -84,6 +86,7 @@ func runApp(c *cli.Context) {
 			c.Bool("quiet"),
 			c.Bool("wait-for-ack"),
 			exConfig,
+			c.String("queue-name"),
 		}
 		makeProducers(c.Int("producer"), c.Int("wait"), c.Int("concurrency"), config)
 	}
@@ -94,9 +97,9 @@ type ExchangeConfig struct {
 	DelayMessages int
 }
 
-func MakeQueueAndBind(c *amqp.Channel, exConfig ExchangeConfig) amqp.Queue {
+func MakeQueueAndBind(c *amqp.Channel, exConfig ExchangeConfig, queueName string) amqp.Queue {
 
-	q := MakeQueue(c)
+	q := MakeQueue(c, queueName)
 
 	// declare exchange and bind queue if not using nameless exchange
 	if exConfig.Name != "" {
@@ -124,8 +127,8 @@ func MakeExchange(c *amqp.Channel, exConfig ExchangeConfig) {
 	}
 }
 
-func MakeQueue(c *amqp.Channel) amqp.Queue {
-	q, err := c.QueueDeclare("stress-test", true, false, false, false, nil)
+func MakeQueue(c *amqp.Channel, queueName string) amqp.Queue {
+	q, err := c.QueueDeclare(queueName, true, false, false, false, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
