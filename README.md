@@ -55,6 +55,6 @@ Consume messages forever:
 	./tester -s rabbit-mq-test.cs1cloud.internal -c 0
 
 
-Produce 100,000 messages of 10KB each, using 50 concurrent goroutines, waiting 100 nanoseconds between each message. Only print to stdout if there is a nack or when you finish.
+Produce 100,000 messages of 10KB each to queue named `custom-queue-name`, using 50 concurrent goroutines, waiting 100 nanoseconds between each message. Only print to stdout if there is a nack or when you finish.
 
-	./tester -s rabbit-mq-test.cs1cloud.internal -p 100000 -b 10000 -w 100 -n 50 -q
+	./tester -s rabbit-mq-test.cs1cloud.internal -p 100000 -b 10000 -w 100 -n 50 -q --queue-name custom-queue-name
