@@ -13,6 +13,7 @@ type ConsumerConfig struct {
 	ThinkTime      int
 	ExchangeConfig ExchangeConfig
 	PrefetchCount  int
+	queueName string
 }
 
 func Consume(config ConsumerConfig, doneChan chan bool) {
@@ -35,7 +36,7 @@ func Consume(config ConsumerConfig, doneChan chan bool) {
 		}
 	}
 
-	q := MakeQueueAndBind(channel, config.ExchangeConfig)
+	q := MakeQueueAndBind(channel, config.ExchangeConfig, config.queueName)
 
 	msgs, err := channel.Consume(q.Name, "", config.ThinkTime == 0, false, false, false, nil)
 	if err != nil {
@@ -62,3 +63,4 @@ func Consume(config ConsumerConfig, doneChan chan bool) {
 	log.Println("done receiving")
 
 }
+

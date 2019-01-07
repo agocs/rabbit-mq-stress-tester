@@ -31,6 +31,7 @@ Running
 	   --user, -u 						Rabbitmq username
 	   --password, --pass 		        Rabbitmq password
 	   --vhost, -V                      vhost for RabbitMQ server
+       --queue-name                     Name of the queue to `produce to` or `consume from`
 	   --producer, -p '0'				Number of messages to produce, -1 to produce forever
 	   --exchange, -x                   Name of exchange to send messages to
 	   --wait, -w '0'					Number of nanoseconds to wait between publish events
@@ -54,6 +55,6 @@ Consume messages forever:
 	./tester -s rabbit-mq-test.cs1cloud.internal -c 0
 
 
-Produce 100,000 messages of 10KB each, using 50 concurrent goroutines, waiting 100 nanoseconds between each message. Only print to stdout if there is a nack or when you finish.
+Produce 100,000 messages of 10KB each to queue named `custom-queue-name`, using 50 concurrent goroutines, waiting 100 nanoseconds between each message. Only print to stdout if there is a nack or when you finish.
 
-	./tester -s rabbit-mq-test.cs1cloud.internal -p 100000 -b 10000 -w 100 -n 50 -q
+	./tester -s rabbit-mq-test.cs1cloud.internal -p 100000 -b 10000 -w 100 -n 50 -q --queue-name custom-queue-name

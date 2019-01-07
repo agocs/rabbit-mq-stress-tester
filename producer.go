@@ -15,6 +15,7 @@ type ProducerConfig struct {
 	Quiet          bool
 	WaitForAck     bool
 	ExchangeConfig ExchangeConfig
+	queueName string
 }
 
 func Produce(config ProducerConfig, tasks chan int, producerId int) {
@@ -34,8 +35,8 @@ func Produce(config ProducerConfig, tasks chan int, producerId int) {
 	}
 
 	ack, nack := channel.NotifyConfirm(make(chan uint64, 1), make(chan uint64, 1))
-
-	q := MakeQueueAndBind(channel, config.ExchangeConfig)
+	
+    q := MakeQueueAndBind(channel, config.ExchangeConfig, config.queueName)
 
 	for {
 
@@ -705,3 +706,4 @@ landojn de la tero, por ke iam ĉiuj eksentu ĝian benon.`
 	return longString[0:bytes]
 
 }
+
